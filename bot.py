@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+import sys
+sys.setrecursionlimit(10000)  # ← ДОБАВЬТЕ ЭТУ СТРОЧКУ
+import os
 import os
 import requests
 import json
