@@ -1,112 +1,35 @@
 # -*- coding: utf-8 -*-
 import os
-import json
 import time
 import threading
-from datetime import datetime
 from flask import Flask
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Правильные импорты для версии 20.7
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+# ============= ТВОЙ ТОКЕН (ВСТАВЬ СВОЙ) =============
+TOKEN = "8406751711:AAEaRPPp-AS8_xuHb9JjUxY_UfTEybwRE0U"
+# ====================================================
 
-# ===================== КОНФИГУРАЦИЯ =====================
-SPECIALTIES = {
-    "ir": "Международные отношения (6-05-0312-02)",
-    "we": "Мировая экономика (6-05-0311-03)",
-    "il": "Международное право (6-05-0421-02)",
-}
-DATA_FILE = "user_data.json"
-
-# ===================== РАБОТА С ДАННЫМИ =====================
-def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except:
-            return {}
-    return {}
-
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-# ===================== КОМАНДЫ БОТА =====================
+# Простейшая команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton(name, callback_data=key)] for key, name in SPECIALTIES.items()]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "👋 *Добро пожаловать!*\n\nВыберите специальность:",
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("✅ Привет! Я работаю!")
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = str(query.from_user.id)
-    key = query.data
-    users = load_data()
-    if user_id not in users:
-        users[user_id] = []
-    if key in users[user_id]:
-        users[user_id].remove(key)
-        action = "отписались ❌"
-    else:
-        users[user_id].append(key)
-        action = "подписались ✅"
-    save_data(users)
-    await query.edit_message_text(
-        f"Вы *{action}* на специальность:\n*{SPECIALTIES[key]}*",
-        parse_mode="Markdown"
-    )
+# Запуск бота
+def run_bot():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    print("✅ Бот запущен! Жду команды...")
+    app.run_polling()
 
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    users = load_data()
-    if user_id not in users or not users[user_id]:
-        await update.message.reply_text("Вы пока не подписаны.")
-        return
-    subs = [f"• {SPECIALTIES[key]}" for key in users[user_id] if key in SPECIALTIES]
-    await update.message.reply_text("📋 *Ваши подписки:*\n\n" + "\n".join(subs), parse_mode="Markdown")
-
-# ===================== ФОНОВАЯ ПРОВЕРКА =====================
-def check_for_updates():
-    print(f"[{datetime.now()}] Проверка обновлений...")
-    return []
-
-def background_checker(app):
-    while True:
-        try:
-            updated = check_for_updates()
-            if updated:
-                print(f"🔔 Обновления: {updated}")
-        except Exception as e:
-            print(f"❌ Ошибка: {e}")
-        time.sleep(300)
-
-# ===================== ВЕБ-СЕРВЕР =====================
+# Веб-сервер для Render
 web_app = Flask(__name__)
 
 @web_app.route('/')
 def index():
     return "Бот работает ✅", 200
 
-# ===================== ЗАПУСК =====================
-def run_bot():
-    token = os.getenv("BOT_TOKEN")
-    if not token:
-        print("❌ BOT_TOKEN не найден!")
-        return
-    app = Application.builder().token(token).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CallbackQueryHandler(button_callback))
-    threading.Thread(target=background_checker, args=(app,), daemon=True).start()
-    print("✅ Бот запущен!")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
-
 if __name__ == "__main__":
+    # Запускаем бота в фоне
     threading.Thread(target=run_bot, daemon=True).start()
+    # Запускаем веб-сервер
     web_app.run(host="0.0.0.0", port=8080)
