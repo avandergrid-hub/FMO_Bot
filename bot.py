@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 from flask import Flask
 
-# Используем импорты для версии 20.7
+# Правильные импорты для версии 20.7
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -36,7 +36,11 @@ def save_data(data):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton(name, callback_data=key)] for key, name in SPECIALTIES.items()]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("👋 Выберите специальность:", reply_markup=reply_markup)
+    await update.message.reply_text(
+        "👋 *Добро пожаловать!*\n\nВыберите специальность:",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -53,16 +57,19 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users[user_id].append(key)
         action = "подписались ✅"
     save_data(users)
-    await query.edit_message_text(f"Вы {action} на {SPECIALTIES[key]}")
+    await query.edit_message_text(
+        f"Вы *{action}* на специальность:\n*{SPECIALTIES[key]}*",
+        parse_mode="Markdown"
+    )
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     users = load_data()
     if user_id not in users or not users[user_id]:
-        await update.message.reply_text("Вы не подписаны.")
+        await update.message.reply_text("Вы пока не подписаны.")
         return
     subs = [f"• {SPECIALTIES[key]}" for key in users[user_id] if key in SPECIALTIES]
-    await update.message.reply_text("Ваши подписки:\n" + "\n".join(subs))
+    await update.message.reply_text("📋 *Ваши подписки:*\n\n" + "\n".join(subs), parse_mode="Markdown")
 
 # ===================== ФОНОВАЯ ПРОВЕРКА =====================
 def check_for_updates():
